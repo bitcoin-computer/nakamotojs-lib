@@ -189,11 +189,47 @@ describe('Transaction', () => {
     });
   });
 
+  describe('updateInput', () => {
+    let prevTxHash: Buffer;
+    let prevTxHash2: Buffer;
+    beforeEach(() => {
+      prevTxHash = Buffer.from(
+        'ffffffff00ffff000000000000000000000000000000000000000000101010ff',
+        'hex',
+      );
+
+      prevTxHash2 = Buffer.from(
+        'ffffffff00ffff000000000000000000000000000000000000000000101010aa',
+        'hex',
+      );
+    });
+
+    it('updates an index', () => {
+      const tx = new Transaction();
+      assert.strictEqual(tx.addInput(prevTxHash, 0), 0);
+      assert.strictEqual(tx.ins[0].index, 0);
+      tx.updateInput(0, prevTxHash2, 1);
+      assert.strictEqual(tx.ins[0].index, 1);
+      assert.strictEqual(tx.ins[0].hash, prevTxHash2);
+
+    });
+  });
+
   describe('addOutput', () => {
     it('returns an index', () => {
       const tx = new Transaction();
       assert.strictEqual(tx.addOutput(Buffer.alloc(0), 0), 0);
       assert.strictEqual(tx.addOutput(Buffer.alloc(0), 0), 1);
+    });
+  });
+
+  describe('updateOutput', () => {
+    it('returns an index', () => {
+      const tx = new Transaction();
+      assert.strictEqual(tx.addOutput(Buffer.alloc(0), 0), 0);
+      tx.updateOutput(0, Buffer.alloc(1), 1);
+      assert.strictEqual(tx.outs[0].value, 1);
+      assert.strictEqual(tx.outs[0].script.toString(), Buffer.alloc(1).toString());
     });
   });
 

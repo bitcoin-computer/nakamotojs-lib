@@ -130,6 +130,27 @@ class Transaction {
       }) - 1
     );
   }
+  updateInput(inputIndex, hash, outputIndex, sequence, scriptSig) {
+    typeforce(
+      types.tuple(
+        types.Number,
+        types.maybe(types.Hash256bit),
+        types.maybe(types.UInt32),
+        types.maybe(types.UInt32),
+        types.maybe(types.Buffer),
+      ),
+      arguments,
+    );
+    if (inputIndex >= this.ins.length)
+      throw new Error('No input at index: ' + inputIndex);
+    if (typeof hash !== 'undefined') this.ins[inputIndex].hash = hash;
+    if (typeof outputIndex !== 'undefined')
+      this.ins[inputIndex].index = outputIndex;
+    if (typeof sequence !== 'undefined')
+      this.ins[inputIndex].sequence = sequence;
+    if (typeof scriptSig !== 'undefined')
+      this.ins[inputIndex].script = scriptSig;
+  }
   addOutput(scriptPubKey, value) {
     typeforce(types.tuple(types.Buffer, types.Satoshi), arguments);
     // Add the output and return the output's index
@@ -139,6 +160,21 @@ class Transaction {
         value,
       }) - 1
     );
+  }
+  updateOutput(outputIndex, scriptPubKey, value) {
+    typeforce(
+      types.tuple(
+        types.Number,
+        types.maybe(types.Buffer),
+        types.maybe(types.Satoshi),
+      ),
+      arguments,
+    );
+    if (outputIndex >= this.outs.length)
+      throw new Error('No output at index: ' + outputIndex);
+    if (typeof scriptPubKey !== 'undefined')
+      this.outs[outputIndex].script = scriptPubKey;
+    if (typeof value !== 'undefined') this.outs[outputIndex].value = value;
   }
   hasWitnesses() {
     return this.ins.some(x => {
