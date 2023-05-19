@@ -202,7 +202,7 @@ export class Transaction {
       arguments,
     );
 
-    if (types.Null(sequence)) sequence = Transaction.DEFAULT_SEQUENCE;
+    if (inputIndex >= this.ins.length) throw new Error('No input at index: ' + inputIndex);
 
     if (typeof hash !== 'undefined') this.ins[inputIndex].hash = hash;
 
@@ -241,6 +241,8 @@ export class Transaction {
       ),
       arguments,
     );
+
+    if (outputIndex >= this.outs.length) throw new Error('No output at index: ' + outputIndex);
 
     if (typeof scriptPubKey !== 'undefined')
       this.outs[outputIndex].script = scriptPubKey;
