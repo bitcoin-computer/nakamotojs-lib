@@ -1230,14 +1230,8 @@ function getSigningData(
     vin = signParams;
   } else if (typeof signParams === 'object') {
     checkSignArgs(inputs, signParams);
-    ({
-      vin,
-      keyPair,
-      redeemScript,
-      hashType,
-      witnessValue,
-      witnessScript,
-    } = signParams);
+    ({ vin, keyPair, redeemScript, hashType, witnessValue, witnessScript } =
+      signParams);
   } else {
     throw new TypeError(
       'TransactionBuilder sign first arg must be TxbSignArg or number',
