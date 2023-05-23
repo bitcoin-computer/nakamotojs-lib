@@ -1,6 +1,6 @@
 {
   "name": "@bitcoin-computer/nakamotojs-lib",
-  "version": "6.1.4",
+  "version": "6.1.5",
   "description": "Client-side Bitcoin and Litecoin JavaScript library",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
@@ -85,7 +85,7 @@
     "prettier": "^2.8.0",
     "proxyquire": "^2.0.1",
     "randombytes": "^2.1.0",
-    "@bitcoin-computer/nakamotojs-client": "0.2.1",
+    "@bitcoin-computer/nakamotojs-client": "0.2.2",
     "rimraf": "^2.6.3",
     "tiny-secp256k1": "^2.2.0",
     "ts-node": "^8.3.0",

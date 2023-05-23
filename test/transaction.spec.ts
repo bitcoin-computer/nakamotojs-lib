@@ -211,7 +211,6 @@ describe('Transaction', () => {
       tx.updateInput(0, prevTxHash2, 1);
       assert.strictEqual(tx.ins[0].index, 1);
       assert.strictEqual(tx.ins[0].hash, prevTxHash2);
-
     });
   });
 
@@ -229,7 +228,10 @@ describe('Transaction', () => {
       assert.strictEqual(tx.addOutput(Buffer.alloc(0), 0), 0);
       tx.updateOutput(0, Buffer.alloc(1), 1);
       assert.strictEqual(tx.outs[0].value, 1);
-      assert.strictEqual(tx.outs[0].script.toString(), Buffer.alloc(1).toString());
+      assert.strictEqual(
+        tx.outs[0].script.toString(),
+        Buffer.alloc(1).toString(),
+      );
     });
   });
 
