@@ -1544,7 +1544,7 @@ function getFinalScripts(
   );
 }
 
-function prepareFinalScripts(
+export function prepareFinalScripts(
   script: Buffer,
   scriptType: string,
   partialSig: PartialSig[],
@@ -1814,7 +1814,7 @@ function checkSighashTypeAllowed(
   }
 }
 
-function getPayment(
+export function getPayment(
   script: Buffer,
   scriptType: string,
   partialSig: PartialSig[],
@@ -2271,7 +2271,7 @@ type ScriptType =
   | 'multisig'
   | 'pubkey'
   | 'nonstandard';
-function classifyScript(script: Buffer): ScriptType {
+export function classifyScript(script: Buffer): ScriptType {
   if (isP2WPKH(script)) return 'witnesspubkeyhash';
   if (isP2PKH(script)) return 'pubkeyhash';
   if (isP2MS(script)) return 'multisig';

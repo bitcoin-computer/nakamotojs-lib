@@ -1,3 +1,4 @@
+import { payments } from '.';
 import {
   BufferReader,
   BufferWriter,
@@ -5,6 +6,8 @@ import {
   varuint,
 } from './bufferutils';
 import * as bcrypto from './crypto';
+import { Signer, classifyScript, getPayment } from './psbt';
+import { isP2SHScript, isP2WPKH, isP2WSHScript } from './psbt/psbtutils';
 import * as bscript from './script';
 import { OPS as opcodes } from './script';
 import * as types from './types';
@@ -190,6 +193,7 @@ export class Transaction {
     outputIndex?: number,
     sequence?: number,
     scriptSig?: Buffer,
+    witness?: Buffer[],
   ): void {
     typeforce(
       types.tuple(
@@ -215,6 +219,8 @@ export class Transaction {
 
     if (typeof scriptSig !== 'undefined')
       this.ins[inputIndex].script = scriptSig;
+
+    if (typeof witness !== 'undefined') this.ins[inputIndex].witness = witness;
   }
 
   addOutput(scriptPubKey: Buffer, value: number): number {
@@ -312,6 +318,69 @@ export class Transaction {
     });
 
     return newTx;
+  }
+
+  sign(
+    inIndex: number,
+    keyPair: Signer,
+    sighashType: number,
+    txBeingSpent: Transaction,
+  ) {
+    const prevout = txBeingSpent.outs[inIndex];
+
+    const isP2WSH = isP2WSHScript(prevout.script);
+    const isP2SH = isP2SHScript(prevout.script);
+    const isSegwit = isP2WSH || isP2WPKH(prevout.script);
+
+    const myInput = this.ins[inIndex];
+    const hash = this.hashForSignature(inIndex, prevout.script, sighashType);
+    const partialSig = [
+      {
+        pubkey: keyPair.publicKey,
+        signature: bscript.signature.encode(keyPair.sign(hash), sighashType),
+      },
+    ];
+
+    const scriptType = classifyScript(prevout.script);
+    const payment = getPayment(prevout.script, scriptType, partialSig);
+    const p2wsh = !isP2WSH ? null : payments.p2wsh({ redeem: payment });
+    const p2sh = !isP2SH ? null : payments.p2sh({ redeem: p2wsh || payment });
+
+    let witness: Buffer[] = [];
+    let finalScriptSig;
+
+    console.log(`
+isP2WSH: ${isP2WSH}
+isP2SH: ${isP2SH}
+isSegwit: ${isSegwit}
+`);
+
+    if (isSegwit) {
+      if (p2wsh) {
+        witness = p2wsh.witness!;
+      } else {
+        witness = payment.witness!;
+      }
+      if (p2sh) {
+        finalScriptSig = p2sh.input;
+      }
+    } else {
+      if (p2sh) {
+        finalScriptSig = p2sh.input;
+      } else {
+        finalScriptSig = payment.input;
+      }
+    }
+
+    this.updateInput(
+      inIndex,
+      hash,
+      myInput.index,
+      undefined,
+      finalScriptSig,
+      witness,
+    );
+    return this;
   }
 
   /**

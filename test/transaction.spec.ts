@@ -1,8 +1,14 @@
 import * as assert from 'assert';
 import { beforeEach, describe, it } from 'mocha';
 import { Transaction } from '..';
+import * as ecc from '@bitcoin-computer/tiny-secp256k1';
+import { ECPairFactory } from 'ecpair';
 import * as bscript from '../src/script';
+import * as payments from '../src/payments';
+
 import * as fixtures from './fixtures/transaction.json';
+
+const ECPair = ECPairFactory(ecc);
 
 describe('Transaction', () => {
   function fromRaw(raw: any, noWitness?: boolean): Transaction {
@@ -393,5 +399,23 @@ describe('Transaction', () => {
         (new Transaction().setWitness as any)(0, 'foobar');
       }, /Expected property "1" of type \[Buffer], got String "foobar"/);
     });
+  });
+
+  describe.only('sign', () => {
+    const keyPair = ECPair.makeRandom();
+
+    const { publicKey } = keyPair;
+    const txToSpend = new Transaction();
+    const payment = payments.p2pkh({ pubkey: publicKey });
+
+    console.log(`payment ${JSON.stringify(payment, null, 2)}`);
+
+    txToSpend.addOutput(payment.output!, 100000);
+
+    const randScript = Buffer.from('6a', 'hex');
+    const tx = new Transaction();
+    tx.addInput(txToSpend.getHash(), 0);
+    tx.addOutput(randScript, 5000000000);
+    tx.sign(0, keyPair, Transaction.SIGHASH_ALL, tx);
   });
 });
