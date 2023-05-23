@@ -324,16 +324,18 @@ export class Transaction {
     inIndex: number,
     keyPair: Signer,
     sighashType: number,
-    txBeingSpent: Transaction,
+    prevOutScript: Buffer,
   ) {
-    const prevout = txBeingSpent.outs[inIndex];
+    const isP2WSH = isP2WSHScript(prevOutScript);
+    const isP2SH = isP2SHScript(prevOutScript);
+    const isSegwit = isP2WSH || isP2WPKH(prevOutScript);
 
-    const isP2WSH = isP2WSHScript(prevout.script);
-    const isP2SH = isP2SHScript(prevout.script);
-    const isSegwit = isP2WSH || isP2WPKH(prevout.script);
-
-    const myInput = this.ins[inIndex];
-    const hash = this.hashForSignature(inIndex, prevout.script, sighashType);
+    const prevOutIdx = this.ins[inIndex].index;
+    const hash = this.hashForSignature(
+      inIndex,
+      prevOutScript as Buffer,
+      sighashType,
+    );
     const partialSig = [
       {
         pubkey: keyPair.publicKey,
@@ -341,19 +343,13 @@ export class Transaction {
       },
     ];
 
-    const scriptType = classifyScript(prevout.script);
-    const payment = getPayment(prevout.script, scriptType, partialSig);
+    const scriptType = classifyScript(prevOutScript);
+    const payment = getPayment(prevOutScript, scriptType, partialSig);
     const p2wsh = !isP2WSH ? null : payments.p2wsh({ redeem: payment });
     const p2sh = !isP2SH ? null : payments.p2sh({ redeem: p2wsh || payment });
 
     let witness: Buffer[] = [];
     let finalScriptSig;
-
-    console.log(`
-isP2WSH: ${isP2WSH}
-isP2SH: ${isP2SH}
-isSegwit: ${isSegwit}
-`);
 
     if (isSegwit) {
       if (p2wsh) {
@@ -374,8 +370,8 @@ isSegwit: ${isSegwit}
 
     this.updateInput(
       inIndex,
-      hash,
-      myInput.index,
+      undefined,
+      prevOutIdx,
       undefined,
       finalScriptSig,
       witness,

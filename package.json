@@ -86,6 +86,7 @@
     "proxyquire": "^2.0.1",
     "randombytes": "^2.1.0",
     "@bitcoin-computer/nakamotojs-client": "0.2.2",
+    "@bitcoin-computer/tiny-secp256k1": "^2.2.1",
     "rimraf": "^2.6.3",
     "tiny-secp256k1": "^2.2.0",
     "ts-node": "^8.3.0",
