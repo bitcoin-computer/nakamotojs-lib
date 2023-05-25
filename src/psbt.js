@@ -1,6 +1,10 @@
 'use strict';
 Object.defineProperty(exports, '__esModule', { value: true });
-exports.Psbt = void 0;
+exports.classifyScript =
+  exports.getPayment =
+  exports.prepareFinalScripts =
+  exports.Psbt =
+    void 0;
 const bip174_1 = require('bip174');
 const varuint = require('bip174/src/lib/converter/varint');
 const utils_1 = require('bip174/src/lib/utils');
@@ -1194,6 +1198,7 @@ function prepareFinalScripts(
     finalScriptWitness,
   };
 }
+exports.prepareFinalScripts = prepareFinalScripts;
 function getHashAndSighashType(
   inputs,
   inputIndex,
@@ -1416,6 +1421,7 @@ function getPayment(script, scriptType, partialSig) {
   }
   return payment;
 }
+exports.getPayment = getPayment;
 function getScriptFromInput(inputIndex, input, cache) {
   const unsignedTx = cache.__TX;
   const res = {
@@ -1742,6 +1748,7 @@ function classifyScript(script) {
   if ((0, psbtutils_1.isP2PK)(script)) return 'pubkey';
   return 'nonstandard';
 }
+exports.classifyScript = classifyScript;
 function range(n) {
   return [...Array(n).keys()];
 }

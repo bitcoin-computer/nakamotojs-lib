@@ -3,6 +3,8 @@ Object.defineProperty(exports, '__esModule', { value: true });
 exports.Transaction = void 0;
 const bufferutils_1 = require('./bufferutils');
 const bcrypto = require('./crypto');
+const psbt_1 = require('./psbt');
+const psbtutils_1 = require('./psbt/psbtutils');
 const bscript = require('./script');
 const script_1 = require('./script');
 const types = require('./types');
@@ -130,7 +132,7 @@ class Transaction {
       }) - 1
     );
   }
-  updateInput(inputIndex, hash, outputIndex, sequence, scriptSig) {
+  updateInput(inputIndex, hash, outputIndex, sequence, scriptSig, witness) {
     typeforce(
       types.tuple(
         types.Number,
@@ -150,6 +152,8 @@ class Transaction {
       this.ins[inputIndex].sequence = sequence;
     if (typeof scriptSig !== 'undefined')
       this.ins[inputIndex].script = scriptSig;
+    if (typeof witness !== 'undefined')
+      this.ins[inputIndex].witness = [witness];
   }
   addOutput(scriptPubKey, value) {
     typeforce(types.tuple(types.Buffer, types.Satoshi), arguments);
@@ -228,6 +232,38 @@ class Transaction {
       };
     });
     return newTx;
+  }
+  sign(inIndex, keyPair, sighashType, prevOutScript) {
+    const isP2WSH = (0, psbtutils_1.isP2WSHScript)(prevOutScript);
+    const isP2SH = (0, psbtutils_1.isP2SHScript)(prevOutScript);
+    const isSegwit = isP2WSH || (0, psbtutils_1.isP2WPKH)(prevOutScript);
+    const prevOutIdx = this.ins[inIndex].index;
+    const hash = this.hashForSignature(inIndex, prevOutScript, sighashType);
+    const scriptType = (0, psbt_1.classifyScript)(prevOutScript);
+    const partialSig = [
+      {
+        pubkey: keyPair.publicKey,
+        signature: bscript.signature.encode(keyPair.sign(hash), sighashType),
+      },
+    ];
+    const { finalScriptSig, finalScriptWitness } = (0,
+    psbt_1.prepareFinalScripts)(
+      prevOutScript,
+      scriptType,
+      partialSig,
+      isSegwit,
+      isP2SH,
+      isP2WSH,
+    );
+    this.updateInput(
+      inIndex,
+      undefined,
+      prevOutIdx,
+      undefined,
+      finalScriptSig,
+      finalScriptWitness,
+    );
+    return this;
   }
   /**
    * Hash transaction for signing a specific input.
