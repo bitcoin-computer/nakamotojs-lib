@@ -5,6 +5,7 @@ import ECPairFactory from 'ecpair';
 import { describe, it } from 'mocha';
 import * as bitcoin from '../..';
 import { regtestUtils, regtestLitecoinUtils } from './_regtest';
+import { Transaction } from '../..';
 
 const ECPair = ECPairFactory(ecc);
 const rng = require('randombytes');
@@ -189,6 +190,113 @@ describe('nakamotojs-lib (transactions with psbt)', () => {
 
     // build and broadcast our RegTest network
     await regtestUtils.broadcast(psbt.extractTransaction().toHex());
+  });
+
+  it('buyer and seller can jointly create a partially signed transaction', async () => {
+    const MIN = 1e5;
+    const N = 2e5;
+
+    // seller
+    const seller = createPayment(
+      'p2pkh',
+      undefined,
+      regtestLitecoinUtils.network,
+    );
+
+    const nftOutpoint = await getInputData(
+      MIN,
+      seller.payment,
+      false,
+      'noredeem',
+    );
+    const payToSeller = bitcoin.payments.p2pkh({
+      pubkey: seller.keys[0].publicKey,
+      network: regtestLitecoinUtils.network,
+    });
+    const sellerTx = new Transaction();
+    sellerTx.addInput(Buffer.alloc(32), 0); // dummy input (N+MIN sat)
+    sellerTx.addInput(
+      bitcoin.bufferUtils.reverseBuffer(Buffer.from(nftOutpoint.hash, 'hex')),
+      nftOutpoint.index,
+    ); // seller unspent holding NFT (MIN Sat)
+    sellerTx.addOutput(Buffer.alloc(8), MIN); // dummy output 0
+    sellerTx.addOutput(payToSeller.output!, N); // N payment to seller
+
+    sellerTx.sign(
+      1,
+      seller.keys[0],
+      Transaction.SIGHASH_SINGLE | Transaction.SIGHASH_ANYONECANPAY,
+      bitcoin.Transaction.fromHex(nftOutpoint.nonWitnessUtxo).outs[0].script,
+    );
+
+    // send to the off-chain protocol
+    const txHex = sellerTx.toHex();
+
+    assert(txHex);
+
+    // buyer receive from off-chain protocol
+    const buyerTx = Transaction.fromHex(txHex);
+
+    assert.deepStrictEqual(buyerTx, sellerTx);
+    const buyerPayment = createPayment(
+      'p2pkh',
+      undefined,
+      regtestLitecoinUtils.network,
+    );
+
+    const buyerPayment0 = await getInputData(
+      N + MIN,
+      buyerPayment.payment,
+      false,
+      'noredeem',
+    );
+
+    const buyerPaymentToMiners = await getInputData(
+      1e4,
+      buyerPayment.payment,
+      false,
+      'noredeem',
+    );
+
+    const buyerOutput0 = bitcoin.payments.p2pkh({
+      pubkey: buyerPayment.keys[0].publicKey,
+      network: regtestLitecoinUtils.network,
+    });
+
+    buyerTx.updateInput(
+      0,
+      bitcoin.bufferUtils.reverseBuffer(Buffer.from(buyerPayment0.hash, 'hex')),
+      buyerPayment0.index,
+    ); // N + MIN
+    // miners fee
+    buyerTx.addInput(
+      bitcoin.bufferUtils.reverseBuffer(
+        Buffer.from(buyerPaymentToMiners.hash, 'hex'),
+      ),
+      buyerPaymentToMiners.index,
+    );
+    buyerTx.updateOutput(0, buyerOutput0.output!, MIN); // Output 0
+    buyerTx.addOutput(buyerOutput0.output!, MIN); // Output 2
+
+    buyerTx.sign(
+      0,
+      buyerPayment.keys[0],
+      Transaction.SIGHASH_ALL,
+      bitcoin.Transaction.fromHex(buyerPayment0.nonWitnessUtxo).outs[0].script,
+    );
+
+    buyerTx.sign(
+      2,
+      buyerPayment.keys[0],
+      Transaction.SIGHASH_ALL,
+      bitcoin.Transaction.fromHex(buyerPaymentToMiners.nonWitnessUtxo).outs[0]
+        .script,
+    );
+    const finalTx = buyerTx.toHex();
+    assert(finalTx);
+
+    // send to the network
+    await regtestLitecoinUtils.broadcast(finalTx);
   });
 
   it('can create (and broadcast via 3PBP) a Transaction with an OP_RETURN output', async () => {
