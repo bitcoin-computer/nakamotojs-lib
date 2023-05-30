@@ -401,21 +401,19 @@ describe('Transaction', () => {
     });
   });
 
-  describe.only('sign', () => {
+  describe('sign', () => {
     const keyPair = ECPair.makeRandom();
-
     const { publicKey } = keyPair;
     const txToSpend = new Transaction();
     const payment = payments.p2pkh({ pubkey: publicKey });
-
-    console.log(`payment ${JSON.stringify(payment, null, 2)}`);
-
     txToSpend.addOutput(payment.output!, 100000);
-
     const randScript = Buffer.from('6a', 'hex');
     const tx = new Transaction();
     tx.addInput(txToSpend.getHash(), 0);
     tx.addOutput(randScript, 5000000000);
-    tx.sign(0, keyPair, Transaction.SIGHASH_ALL, tx);
+    const script = txToSpend.outs[0].script;
+    assert(tx.ins[0].script.length === 0);
+    tx.sign(0, keyPair, Transaction.SIGHASH_ALL, script);
+    assert(tx.ins[0].script.length > 0);
   });
 });
