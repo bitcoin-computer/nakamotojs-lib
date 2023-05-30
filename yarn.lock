@@ -202,6 +202,13 @@
     randombytes "^2.1.0"
     tiny-secp256k1 "^2.2.1"
 
+"@bitcoin-computer/tiny-secp256k1@^2.2.1":
+  version "2.2.1"
+  resolved "https://registry.yarnpkg.com/@bitcoin-computer/tiny-secp256k1/-/tiny-secp256k1-2.2.1.tgz#3ce620cfee7547a412fe3431aaa91db48a719ce5"
+  integrity sha512-3+ziK3qhY/EVJxIpaTsSFoOaxEUHE9Ks6hj2x2SH069ES5CmBwmL/QAAmtzlNNys5r1c4QT56wEnLN2Znc3VqQ==
+  dependencies:
+    uint8array-tools "0.0.7"
+
 "@eslint-community/eslint-utils@^4.2.0":
   version "4.4.0"
   resolved "https://registry.yarnpkg.com/@eslint-community/eslint-utils/-/eslint-utils-4.4.0.tgz#a23514e8fb9af1269d5f7788aa556798d61c6b59"

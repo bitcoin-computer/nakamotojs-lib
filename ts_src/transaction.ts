@@ -5,6 +5,8 @@ import {
   varuint,
 } from './bufferutils';
 import * as bcrypto from './crypto';
+import { Signer, classifyScript, prepareFinalScripts } from './psbt';
+import { isP2SHScript, isP2WPKH, isP2WSHScript } from './psbt/psbtutils';
 import * as bscript from './script';
 import { OPS as opcodes } from './script';
 import * as types from './types';
@@ -190,6 +192,7 @@ export class Transaction {
     outputIndex?: number,
     sequence?: number,
     scriptSig?: Buffer,
+    witness?: Buffer,
   ): void {
     typeforce(
       types.tuple(
@@ -215,6 +218,9 @@ export class Transaction {
 
     if (typeof scriptSig !== 'undefined')
       this.ins[inputIndex].script = scriptSig;
+
+    if (typeof witness !== 'undefined')
+      this.ins[inputIndex].witness = [witness];
   }
 
   addOutput(scriptPubKey: Buffer, value: number): number {
@@ -312,6 +318,47 @@ export class Transaction {
     });
 
     return newTx;
+  }
+
+  sign(
+    inIndex: number,
+    keyPair: Signer,
+    sighashType: number,
+    prevOutScript: Buffer,
+  ) {
+    const prevOutIdx = this.ins[inIndex].index;
+    const hash = this.hashForSignature(
+      inIndex,
+      prevOutScript as Buffer,
+      sighashType,
+    );
+    const scriptType = classifyScript(prevOutScript);
+    const partialSig = [
+      {
+        pubkey: keyPair.publicKey,
+        signature: bscript.signature.encode(keyPair.sign(hash), sighashType),
+      },
+    ];
+    const isP2WSH = isP2WSHScript(prevOutScript);
+    const isP2SH = isP2SHScript(prevOutScript);
+    const isSegwit = isP2WSH || isP2WPKH(prevOutScript);
+    const { finalScriptSig, finalScriptWitness } = prepareFinalScripts(
+      prevOutScript,
+      scriptType,
+      partialSig,
+      isSegwit,
+      isP2SH,
+      isP2WSH,
+    );
+    this.updateInput(
+      inIndex,
+      undefined,
+      prevOutIdx,
+      undefined,
+      finalScriptSig,
+      finalScriptWitness,
+    );
+    return this;
   }
 
   /**
